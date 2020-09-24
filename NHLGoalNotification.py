@@ -12,8 +12,8 @@ import requests
 
 DEBUG = True
 TEAM = 'TBL'
-NHL_API_URL = 'http://statsapi.web.nhl.com/api/v1/'
-# NHL_API_URL = 'http://sdpc.home.lan/api/v1/'
+#NHL_API_URL = 'http://statsapi.web.nhl.com/api/v1/'
+NHL_API_URL = 'http://sdpc.home.lan/api/v1/'
 DELAY = 15
 MUTE_INTERMISSION = True
 MUTE_PREGAME = False
@@ -118,12 +118,14 @@ def goal_against() -> None:
 def win() -> None:
 	if DEBUG:
 		print("Win!.")
+	time.sleep(DELAY)
 	winsound.PlaySound('leafswin.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
 
 
 def loss() -> None:
 	if DEBUG:
 		print("Loss.")
+	time.sleep(DELAY)
 	return None
 
 
@@ -138,6 +140,7 @@ def game_started() -> None:
 def start_of_intermission() -> None:
 	if DEBUG:
 		print("Start of Intermission.")
+	time.sleep(DELAY)
 	winsound.PlaySound('notification.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
 	if MUTE_INTERMISSION:
 		os.system("D:\\Steven\\Documents\\NHLGames\\mpv\\mpv-remote.bat set volume 0")
@@ -146,6 +149,7 @@ def start_of_intermission() -> None:
 def end_of_intermission() -> None:
 	if DEBUG:
 		print("End of Intermission.")
+	time.sleep(DELAY)
 	winsound.PlaySound('notification.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
 	if MUTE_INTERMISSION:
 		os.system("D:\\Steven\\Documents\\NHLGames\\mpv\\mpv-remote.bat set volume 100")
@@ -162,9 +166,9 @@ def custom_sleep(seconds) -> None:
 
 
 def main() -> None:
-	if 8 < get_utc().time().hour < 15:
-		print("Game not on API yet.")
-		exit(1)
+	#if 8 < get_utc().time().hour < 15:
+	#	print("Game not on API yet. Wait until time.")
+	#	exit(1)
 
 	first_game_update = get_game_state(TEAM)
 	pregame = True
