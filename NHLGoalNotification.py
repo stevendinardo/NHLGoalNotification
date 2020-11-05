@@ -165,9 +165,9 @@ def custom_sleep(seconds) -> None:
 		time.sleep(1)
 
 
-def main() -> None:
-	#if 8 < get_utc().time().hour < 15:
-	#	print("Game not on API yet. Wait until time.")
+if __name__ == "__main__":
+	if 8 < get_utc().time().hour < 15:
+		print("Game not on API yet. Wait until time.")
 	#	exit(1)
 
 	first_game_update = get_game_state(TEAM)
@@ -253,4 +253,3 @@ def main() -> None:
 # time.sleep(5)
 # end_of_intermission()
 # light.end_of_intermission()
-main()
