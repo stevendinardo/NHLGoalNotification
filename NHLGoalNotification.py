@@ -62,7 +62,7 @@ def get_game_state(team):
 	else:
 		team_id = teams[team]
 	date = datetime.datetime.now().strftime('%Y-%m-%d')
-	nhl_url = '{0}schedule?date={1}&teamId={2}&hydrate=team,linescore'.format(NHL_API_URL, date, team_id)
+	nhl_url = f'{NHL_API_URL}schedule?date={date}&teamId={team_id}&hydrate=team,linescore'
 	nhl_url_response = requests.get(nhl_url, headers=headers)
 	nhl_game_json = json.loads(nhl_url_response.text)
 
@@ -100,7 +100,7 @@ def get_game_state(team):
 
 def goal() -> None:
 	if DEBUG:
-		print(str(get_utc().strftime('%Y-%m-%d %H:%M:%S')) + ": GOAL. Waiting " + str(DELAY) + " seconds.")
+		print(f"{get_utc().strftime('%Y-%m-%d %H:%M:%S')} : GOAL. Waiting {DELAY} seconds.")
 	time.sleep(DELAY)
 	winsound.PlaySound('positivechime.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
 
@@ -110,14 +110,14 @@ def goal() -> None:
 
 def goal_against() -> None:
 	if DEBUG:
-		print(str(get_utc().strftime('%Y-%m-%d %H:%M:%S')) + ": GOAL AGAINST. Waiting " + str(DELAY) + " seconds.")
+		print(f"{get_utc().strftime('%Y-%m-%d %H:%M:%S')} : GOAL AGAINST. Waiting {DELAY} seconds.")
 	time.sleep(DELAY)
 	winsound.PlaySound('negativechime.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
 
 
 def win() -> None:
 	if DEBUG:
-		print("Win!.")
+		print("Win!")
 	time.sleep(DELAY)
 	winsound.PlaySound('leafswin.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
 
@@ -161,7 +161,7 @@ def get_utc() -> datetime.datetime:
 
 def custom_sleep(seconds) -> None:
 	for i in range(seconds):
-		print("Sleep:", seconds - i)
+		print(f"Sleep: {seconds - i}")
 		time.sleep(1)
 
 
@@ -181,7 +181,7 @@ if __name__ == "__main__":
 		exit(1)
 	else:
 		if DEBUG:
-			print("Gamepk is", first_game_update.gamepk)
+			print(f"Gamepk is {first_game_update.gamepk}")
 		if first_game_update.abstract_game_state == 'Preview':
 			pregame = True
 
@@ -191,7 +191,7 @@ if __name__ == "__main__":
 
 			date = datetime.datetime.strptime(first_game_update.game_date, "%Y-%m-%dT%H:%M:%SZ")
 			diff = date - get_utc()
-			print("Sleeping until " + str(date))
+			print(f"Sleeping until {date}")
 			custom_sleep(int(diff.total_seconds()))
 		# if DEBUG: print("Game has not started yet. Sleeping for 20 minutes.")
 		# time.sleep(1200)
@@ -199,7 +199,7 @@ if __name__ == "__main__":
 		elif first_game_update.detailed_state == "Pre-Game":
 			date = datetime.datetime.strptime(first_game_update.game_date, "%Y-%m-%dT%H:%M:%SZ")
 			diff = date - get_utc()
-			print("Sleeping until " + str(date))
+			print(f"Sleeping until {date}")
 			custom_sleep(int(diff.total_seconds()))
 			if DEBUG:
 				print("Pre-game. Sleeping for 60 seconds.")
@@ -213,10 +213,9 @@ if __name__ == "__main__":
 			time.sleep(21)
 			second_game_update = get_game_state(TEAM)
 			print(
-				str(get_utc().strftime('%Y-%m-%d %H:%M:%S'))
-				+ ' Score: '
-				+ str(first_game_update.goals)
-				+ ' - ' + str(first_game_update.opponent_goals)
+				f"{get_utc().strftime('%Y-%m-%d %H:%M:%S')} "
+				f"Score: "
+				f"{first_game_update.goals} - {first_game_update.opponent_goals}"
 			)
 
 			if second_game_update.goals > first_game_update.goals:
@@ -230,8 +229,8 @@ if __name__ == "__main__":
 
 				sleep_time = second_game_update.intermission_time_remaining + 15
 				if DEBUG:
-					print("Intermission. Waiting " + str(DELAY) + " seconds.")
-					print("Sleeping for " + str(sleep_time))
+					print(f"Intermission. Waiting {DELAY} seconds.")
+					print(f"Sleeping for {sleep_time}")
 				time.sleep(DELAY)
 
 				custom_sleep(sleep_time)
