@@ -1,5 +1,4 @@
 import datetime
-import json
 import os
 import string
 import sys
@@ -7,8 +6,7 @@ import time
 import winsound
 
 import requests
-
-# import ArduinoGoalLight
+from ArduinoGoalLight import ArduinoGoalLight
 
 DEBUG = True
 TEAM = 'TBL'
@@ -60,10 +58,10 @@ def get_game_state(team):
 		team_id = ''
 	else:
 		team_id = teams[team]
-	date = datetime.datetime.now().strftime('%Y-%m-%d')
+	date = f"{datetime.datetime.now():%Y-%m-%d}"
 	nhl_url = f'{NHL_API_URL}schedule?date={date}&teamId={team_id}&hydrate=team,linescore'
 	nhl_url_response = requests.get(nhl_url, headers=headers)
-	nhl_game_json = json.loads(nhl_url_response.text)
+	nhl_game_json = nhl_url_response.json()
 
 	if not nhl_game_json['dates']:  # No game today for that team
 		return None
@@ -90,19 +88,19 @@ def get_game_state(team):
 
 def goal() -> None:
 	if DEBUG:
-		print(f"{get_utc().strftime('%Y-%m-%d %H:%M:%S')} GOAL. Waiting {DELAY} seconds.")
+		print(f"{get_utc():%Y-%m-%d %H:%M:%S} GOAL. Waiting {DELAY} seconds.")
 	time.sleep(DELAY)
 	winsound.PlaySound('positivechime.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
-
-
-# winsound.PlaySound('leafsgoal.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
-
+	if LIGHT:
+		goal_light.goal(TEAM)
 
 def goal_against() -> None:
 	if DEBUG:
-		print(f"{get_utc().strftime('%Y-%m-%d %H:%M:%S')} GOAL AGAINST. Waiting {DELAY} seconds.")
+		print(f"{get_utc():%Y-%m-%d %H:%M:%S} GOAL AGAINST. Waiting {DELAY} seconds.")
 	time.sleep(DELAY)
 	winsound.PlaySound('negativechime.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
+	if LIGHT:
+		goal_light.goal_against()
 
 
 def win() -> None:
@@ -110,14 +108,16 @@ def win() -> None:
 		print("Win!")
 	time.sleep(DELAY)
 	winsound.PlaySound('leafswin.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
-	time.sleep(60)
+	if LIGHT:
+		goal_light.win()
 
 
 def loss() -> None:
 	if DEBUG:
 		print("Loss.")
 	time.sleep(DELAY)
-	return None
+	if LIGHT:
+		goal_light.loss()
 
 
 def game_start() -> None:
@@ -126,6 +126,8 @@ def game_start() -> None:
 	winsound.PlaySound('notification.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
 	if MUTE_PREGAME:
 		os.system("D:\\Steven\\Documents\\NHLGames\\mpv\\mpv-remote.bat set volume 100")
+	if LIGHT:
+		goal_light.game_started()
 
 
 def start_of_intermission() -> None:
@@ -135,6 +137,8 @@ def start_of_intermission() -> None:
 	winsound.PlaySound('notification.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
 	if MUTE_INTERMISSION:
 		os.system("D:\\Steven\\Documents\\NHLGames\\mpv\\mpv-remote.bat set volume 0")
+	if LIGHT:
+		goal_light.start_of_intermission()
 
 
 def end_of_intermission() -> None:
@@ -144,6 +148,8 @@ def end_of_intermission() -> None:
 	winsound.PlaySound('notification.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
 	if MUTE_INTERMISSION:
 		os.system("D:\\Steven\\Documents\\NHLGames\\mpv\\mpv-remote.bat set volume 100")
+	if LIGHT:
+		goal_light.end_of_intermission()
 
 
 def get_utc() -> datetime.datetime:
@@ -161,7 +167,7 @@ def intermission_loop() -> None:
 	intermission = True
 	while intermission:
 		if DEBUG:
-			print(f"{get_utc().strftime('%Y-%m-%d %H:%M:%S')} Still intermission. Sleeping for 60 seconds.")
+			print(f"{get_utc():%Y-%m-%d %H:%M:%S} Intermission. Sleeping for 60 seconds.")
 		time.sleep(61)
 		intermission = get_game_state(TEAM).in_intermission
 	end_of_intermission()
@@ -191,13 +197,13 @@ def game_loop(initial_goals, initial_opponent_goals) -> None:
 
 		if game_update.goals > goals:
 			goal()
-		elif game_update.opponent_goals > opponent_goals:
+		if game_update.opponent_goals > opponent_goals:
 			goal_against()
 		if game_update.in_intermission:
 			intermission_loop()
 		if DEBUG:
 			print(
-				f"{get_utc().strftime('%Y-%m-%d %H:%M:%S')} "
+				f"{get_utc():%Y-%m-%d %H:%M:%S} "
 				f"Score: "
 				f"{game_update.goals} - {game_update.opponent_goals}"
 			)
@@ -212,7 +218,12 @@ def game_loop(initial_goals, initial_opponent_goals) -> None:
 
 if __name__ == "__main__":
 
-	game_details = get_game_state(TEAM)
+	try:
+		game_details = get_game_state(TEAM)
+	except:
+		print("Error fetching game.")
+		exit(1)
+
 	if not game_details:
 		print("No game today for that team.")
 		exit(1)
@@ -225,6 +236,9 @@ if __name__ == "__main__":
 		print(f"Game date is {game_details.game_date}.")
 		print(f"Gamepk is {game_details.gamepk}.")
 
+	if LIGHT:
+		goal_light = ArduinoGoalLight()
+
 	if game_details.abstract_game_state == 'Preview':
 		pre_game_loop()
 		game_details = get_game_state(TEAM)
@@ -232,3 +246,6 @@ if __name__ == "__main__":
 	if game_details.abstract_game_state == 'Live':
 		game_start()
 		game_loop(game_details.goals, game_details.opponent_goals)
+
+	if LIGHT:
+		goal_light.exit()
