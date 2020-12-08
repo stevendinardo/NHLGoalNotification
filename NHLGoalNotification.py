@@ -66,20 +66,22 @@ def get_game_state(team):
 	if not nhl_game_json['dates']:  # No game today for that team
 		return None
 
-	if nhl_game_json['dates'][0]['games'][0]['teams']['away']['team']['id'] == team_id:
+	nhl_game_json = nhl_game_json['dates'][0]['games'][0]
+
+	if nhl_game_json['teams']['away']['team']['id'] == team_id:
 		home_string = 'away'
 		opponent_home_string = 'home'
 	else:
 		home_string = 'home'
 		opponent_home_string = 'away'
 
-	gamepk = nhl_game_json['dates'][0]['games'][0]['gamePk']
-	abstract_game_state = nhl_game_json['dates'][0]['games'][0]['status']['abstractGameState']
-	detailed_state = nhl_game_json['dates'][0]['games'][0]['status']['detailedState']
-	goals = nhl_game_json['dates'][0]['games'][0]['teams'][home_string]['score']
-	opponent_goals = nhl_game_json['dates'][0]['games'][0]['teams'][opponent_home_string]['score']
-	game_date = nhl_game_json['dates'][0]['games'][0]['gameDate']
-	in_intermission = nhl_game_json['dates'][0]['games'][0]['linescore']['intermissionInfo']['inIntermission']
+	gamepk = nhl_game_json['gamePk']
+	abstract_game_state = nhl_game_json['status']['abstractGameState']
+	detailed_state = nhl_game_json['status']['detailedState']
+	goals = nhl_game_json['teams'][home_string]['score']
+	opponent_goals = nhl_game_json['teams'][opponent_home_string]['score']
+	game_date = nhl_game_json['gameDate']
+	in_intermission = nhl_game_json['linescore']['intermissionInfo']['inIntermission']
 	return Game(
 		team_id, gamepk, abstract_game_state, detailed_state, goals, opponent_goals, in_intermission,
 		game_date
