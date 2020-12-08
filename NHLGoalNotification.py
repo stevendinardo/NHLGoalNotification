@@ -220,8 +220,8 @@ if __name__ == "__main__":
 
 	try:
 		game_details = get_game_state(TEAM)
-	except:
-		print("Error fetching game.")
+	except Exception as e:
+		print(f"Error fetching game: {e}")
 		exit(1)
 
 	if not game_details:
