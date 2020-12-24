@@ -1,6 +1,5 @@
 import datetime
 import os
-import string
 import sys
 import time
 import winsound
