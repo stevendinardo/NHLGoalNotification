@@ -2,17 +2,14 @@ import datetime
 import os
 import sys
 import time
-import winsound
 
 import requests
-from ArduinoGoalLight import ArduinoGoalLight
 
 DEBUG = True
-TEAM = 'TBL'
-#NHL_API_URL = 'http://statsapi.web.nhl.com/api/v1/'
-NHL_API_URL = 'http://sdpc.home.lan/api/v1/'
+TEAM = 'TOR'
+NHL_API_URL = 'http://statsapi.web.nhl.com/api/v1/'
 DELAY = 15
-MUTE_INTERMISSION = True
+MUTE_INTERMISSION = False
 MUTE_PREGAME = False
 LIGHT = False
 
@@ -91,40 +88,29 @@ def goal() -> None:
 	if DEBUG:
 		print(f"{get_utc():%Y-%m-%d %H:%M:%S} GOAL. Waiting {DELAY} seconds.")
 	time.sleep(DELAY)
-	winsound.PlaySound('positivechime.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
-	if LIGHT:
-		goal_light.goal(TEAM)
+
 
 def goal_against() -> None:
 	if DEBUG:
 		print(f"{get_utc():%Y-%m-%d %H:%M:%S} GOAL AGAINST. Waiting {DELAY} seconds.")
 	time.sleep(DELAY)
-	winsound.PlaySound('negativechime.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
-	if LIGHT:
-		goal_light.goal_against()
 
 
 def win() -> None:
 	if DEBUG:
 		print("Win!")
 	time.sleep(DELAY)
-	winsound.PlaySound('leafswin.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
-	if LIGHT:
-		goal_light.win()
 
 
 def loss() -> None:
 	if DEBUG:
 		print("Loss.")
 	time.sleep(DELAY)
-	if LIGHT:
-		goal_light.loss()
 
 
 def game_start() -> None:
 	if DEBUG:
 		print("Start of Game.")
-	winsound.PlaySound('notification.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
 	if MUTE_PREGAME:
 		os.system("D:\\Steven\\Documents\\NHLGames\\mpv\\mpv-remote.bat set volume 100")
 	if LIGHT:
@@ -135,22 +121,16 @@ def start_of_intermission() -> None:
 	if DEBUG:
 		print("Start of Intermission.")
 	time.sleep(DELAY)
-	winsound.PlaySound('notification.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
 	if MUTE_INTERMISSION:
 		os.system("D:\\Steven\\Documents\\NHLGames\\mpv\\mpv-remote.bat set volume 0")
-	if LIGHT:
-		goal_light.start_of_intermission()
 
 
 def end_of_intermission() -> None:
 	if DEBUG:
 		print("End of Intermission.")
 	time.sleep(DELAY)
-	winsound.PlaySound('notification.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
 	if MUTE_INTERMISSION:
 		os.system("D:\\Steven\\Documents\\NHLGames\\mpv\\mpv-remote.bat set volume 100")
-	if LIGHT:
-		goal_light.end_of_intermission()
 
 
 def get_utc() -> datetime.datetime:
@@ -217,7 +197,30 @@ def game_loop(initial_goals, initial_opponent_goals) -> None:
 		loss()
 
 
+def demo():
+	print("Running a demo. Sleep times have been reduced by 75%. ")
+	print("Game not started. Sleeping for 60 seconds.")
+	time.sleep(20)
+	print("Start of Game.")
+	print(f"{get_utc():%Y-%m-%d %H:%M:%S}  Score: 0 - 0")
+	time.sleep(5)
+	print(f"{get_utc():%Y-%m-%d %H:%M:%S} GOAL AGAINST. Waiting {DELAY} seconds.")
+	time.sleep(3)
+	print("Start of Intermission.")
+	time.sleep(10)
+	print("End of Intermission.")
+	time.sleep(5)
+	print(f"{get_utc():%Y-%m-%d %H:%M:%S} GOAL. Waiting {DELAY} seconds.")
+	time.sleep(5)
+	print("Win!")
+
+
 if __name__ == "__main__":
+
+	for arg in sys.argv:
+		if arg == "--demo":
+			demo()
+			exit(0)
 
 	try:
 		game_details = get_game_state(TEAM)
@@ -237,9 +240,6 @@ if __name__ == "__main__":
 		print(f"Game date is {game_details.game_date}.")
 		print(f"Gamepk is {game_details.gamepk}.")
 
-	if LIGHT:
-		goal_light = ArduinoGoalLight()
-
 	if game_details.abstract_game_state == 'Preview':
 		pre_game_loop()
 		game_details = get_game_state(TEAM)
@@ -247,6 +247,3 @@ if __name__ == "__main__":
 	if game_details.abstract_game_state == 'Live':
 		game_start()
 		game_loop(game_details.goals, game_details.opponent_goals)
-
-	if LIGHT:
-		goal_light.exit()

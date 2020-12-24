@@ -1,10 +1,15 @@
 # NHLGoalNotification
 
-A python program that performs actions after an event in an NHL hockey game, e.g. Play a goal horn sound after a goal.
+A python program that performs actions in real-time after an event in an NHL hockey game by querying the NHL API.
+e.g. Play a goal horn sound after a goal.
 
 There is probably a delay between the NHL API and the stream you're watching so DELAY can be changed to make the program 
 wait until the stream catches up.
 Right now, things like selected team and actions have to be edited in the file, but I plan on changing this at some point.
+
+## Usage
+For a demo when there's no game on, use the --demo flag
+NHLGoalNotification.py --demo
 
 ## Events
 - Start of game
