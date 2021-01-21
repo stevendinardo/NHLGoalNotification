@@ -237,11 +237,16 @@ def demo():
 if __name__ == "__main__":
 
 	parser = argparse.ArgumentParser()
-	parser.add_argument('-d', '--demo', action="store_true", default=False, help="Run a small demo when theres no game")
+	parser.add_argument('--demo', action="store_true", default=False, help="Run a small demo when theres no game")
 	parser.add_argument('-t', '--team', default='TOR', help='Enter the three letter team code. Defualt is "TOR".')
+	parser.add_argument('-d', '--delay', type=int, help='Enter stream delay in seconds.')
 	args = parser.parse_args()
 
+	if args.demo:
+		demo()
+
 	team = args.team
+	DELAY = args.delay or DELAY
 
 	try:
 		game_details = get_game_state(team)
