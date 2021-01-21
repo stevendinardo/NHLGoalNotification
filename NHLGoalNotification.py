@@ -232,6 +232,7 @@ def demo():
 	print(f"{get_utc():%Y-%m-%d %H:%M:%S} GOAL. Waiting {DELAY} seconds.")
 	time.sleep(5)
 	print("Win!")
+	exit(0)
 
 
 if __name__ == "__main__":
@@ -239,7 +240,7 @@ if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--demo', action="store_true", default=False, help="Run a small demo when theres no game")
 	parser.add_argument('-t', '--team', default='TOR', help='Enter the three letter team code. Defualt is "TOR".')
-	parser.add_argument('-d', '--delay', type=int, help='Enter stream delay in seconds.')
+	parser.add_argument('-d', '--delay', type=int, help='Enter stream delay in seconds. Default is 15.')
 	args = parser.parse_args()
 
 	if args.demo:

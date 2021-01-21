@@ -5,11 +5,12 @@ e.g. Play a goal horn sound after a goal.
 
 There is probably a delay between the NHL API and the stream you're watching so DELAY can be changed to make the program 
 wait until the stream catches up.
-Right now, things like selected team and actions have to be edited in the file, but I plan on changing this at some point.
 
 ## Usage
-For a demo when there's no game on, use the --demo flag
-NHLGoalNotification.py --demo
+For a demo when there's no game on, use the --demo flag. For help, use -h or --help.
+
+NHLGoalNotification.py [-h] [--demo] [-t TEAM] [-d DELAY]
+
 
 ## Events
 - Start of game
