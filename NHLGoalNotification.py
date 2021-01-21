@@ -1,15 +1,17 @@
+import argparse
 import datetime
 import os
 import sys
 import time
+import winsound
 
 import requests
+from ArduinoGoalLight import ArduinoGoalLight
 
 DEBUG = True
-TEAM = 'TOR'
 NHL_API_URL = 'http://statsapi.web.nhl.com/api/v1/'
 DELAY = 15
-MUTE_INTERMISSION = False
+MUTE_INTERMISSION = True
 MUTE_PREGAME = False
 LIGHT = False
 
@@ -88,29 +90,40 @@ def goal() -> None:
 	if DEBUG:
 		print(f"{get_utc():%Y-%m-%d %H:%M:%S} GOAL. Waiting {DELAY} seconds.")
 	time.sleep(DELAY)
-
+	winsound.PlaySound('positivechime.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
+	if LIGHT:
+		goal_light.goal(team)
 
 def goal_against() -> None:
 	if DEBUG:
 		print(f"{get_utc():%Y-%m-%d %H:%M:%S} GOAL AGAINST. Waiting {DELAY} seconds.")
 	time.sleep(DELAY)
+	winsound.PlaySound('negativechime.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
+	if LIGHT:
+		goal_light.goal_against()
 
 
 def win() -> None:
 	if DEBUG:
 		print("Win!")
 	time.sleep(DELAY)
+	winsound.PlaySound('leafswin.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
+	if LIGHT:
+		goal_light.win(team)
 
 
 def loss() -> None:
 	if DEBUG:
 		print("Loss.")
 	time.sleep(DELAY)
+	if LIGHT:
+		goal_light.loss()
 
 
 def game_start() -> None:
 	if DEBUG:
 		print("Start of Game.")
+	winsound.PlaySound('notification.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
 	if MUTE_PREGAME:
 		os.system("D:\\Steven\\Documents\\NHLGames\\mpv\\mpv-remote.bat set volume 100")
 	if LIGHT:
@@ -121,16 +134,22 @@ def start_of_intermission() -> None:
 	if DEBUG:
 		print("Start of Intermission.")
 	time.sleep(DELAY)
+	winsound.PlaySound('notification.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
 	if MUTE_INTERMISSION:
 		os.system("D:\\Steven\\Documents\\NHLGames\\mpv\\mpv-remote.bat set volume 0")
+	if LIGHT:
+		goal_light.start_of_intermission()
 
 
 def end_of_intermission() -> None:
 	if DEBUG:
 		print("End of Intermission.")
 	time.sleep(DELAY)
+	winsound.PlaySound('notification.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
 	if MUTE_INTERMISSION:
 		os.system("D:\\Steven\\Documents\\NHLGames\\mpv\\mpv-remote.bat set volume 100")
+	if LIGHT:
+		goal_light.end_of_intermission()
 
 
 def get_utc() -> datetime.datetime:
@@ -150,7 +169,7 @@ def intermission_loop() -> None:
 		if DEBUG:
 			print(f"{get_utc():%Y-%m-%d %H:%M:%S} Intermission. Sleeping for 60 seconds.")
 		time.sleep(61)
-		intermission = get_game_state(TEAM).in_intermission
+		intermission = get_game_state(team).in_intermission
 	end_of_intermission()
 
 
@@ -162,7 +181,7 @@ def pre_game_loop() -> None:
 		if DEBUG:
 			print("Game not started. Sleeping for 60 seconds.")
 		time.sleep(61)
-		game_started = get_game_state(TEAM).abstract_game_state != 'Preview'
+		game_started = get_game_state(team).abstract_game_state != 'Preview'
 
 
 def game_loop(initial_goals, initial_opponent_goals) -> None:
@@ -173,7 +192,7 @@ def game_loop(initial_goals, initial_opponent_goals) -> None:
 	while not final:
 		time.sleep(21)
 
-		game_update = get_game_state(TEAM)
+		game_update = get_game_state(team)
 		final = game_update.abstract_game_state == 'Final'
 
 		if game_update.goals > goals:
@@ -217,13 +236,15 @@ def demo():
 
 if __name__ == "__main__":
 
-	for arg in sys.argv:
-		if arg == "--demo":
-			demo()
-			exit(0)
+	parser = argparse.ArgumentParser()
+	parser.add_argument('-d', '--demo', action="store_true", default=False, help="Run a small demo when theres no game")
+	parser.add_argument('-t', '--team', default='TOR', help='Enter the three letter team code. Defualt is "TOR".')
+	args = parser.parse_args()
+
+	team = args.team
 
 	try:
-		game_details = get_game_state(TEAM)
+		game_details = get_game_state(team)
 	except Exception as e:
 		print(f"Error fetching game: {e}")
 		exit(1)
@@ -236,14 +257,20 @@ if __name__ == "__main__":
 		exit(1)
 
 	if DEBUG:
-		print(f"Team is {TEAM}.")
+		print(f"Team is {team}.")
 		print(f"Game date is {game_details.game_date}.")
 		print(f"Gamepk is {game_details.gamepk}.")
 
+	if LIGHT:
+		goal_light = ArduinoGoalLight()
+
 	if game_details.abstract_game_state == 'Preview':
 		pre_game_loop()
-		game_details = get_game_state(TEAM)
+		game_details = get_game_state(team)
 
 	if game_details.abstract_game_state == 'Live':
 		game_start()
 		game_loop(game_details.goals, game_details.opponent_goals)
+
+	if LIGHT:
+		goal_light.exit()
