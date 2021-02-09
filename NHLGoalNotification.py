@@ -56,7 +56,7 @@ def get_game_state(team):
 		team_id = ''
 	else:
 		team_id = teams[team]
-	date = f"{datetime.datetime.now():%Y-%m-%d}"
+	date = f"{datetime.datetime.now()-datetime.timedelta(hours=6):%Y-%m-%d}"
 	nhl_url = f'{NHL_API_URL}schedule?date={date}&teamId={team_id}&hydrate=team,linescore'
 	nhl_url_response = requests.get(nhl_url, headers=headers)
 	nhl_game_json = nhl_url_response.json()
