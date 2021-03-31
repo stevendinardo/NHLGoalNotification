@@ -36,184 +36,158 @@ teams = dict(
 )
 
 
-class Game:
-	def __init__(
-			self, team_id, gamepk, abstract_game_state, detailed_state, goals, opponent_goals, in_intermission,
-			game_date
-	):
-		self.team_id = team_id
-		self.gamepk = gamepk
-		self.abstract_game_state = abstract_game_state
-		self.detailed_state = detailed_state
-		self.goals = goals
-		self.opponent_goals = opponent_goals
-		self.in_intermission = in_intermission
-		self.game_date = game_date
+def get_shifted_time() -> datetime.datetime:
+	return datetime.datetime.now() - datetime.timedelta(hours=6)
 
 
-def get_game_state(team):
-	if not team:
-		team_id = ''
-	else:
-		team_id = teams[team]
-	date = f"{datetime.datetime.now()-datetime.timedelta(hours=6):%Y-%m-%d}"
+def get_nhl_json(team_id):
+	date = f"{get_shifted_time():%Y-%m-%d}"
 	nhl_url = f'{NHL_API_URL}schedule?date={date}&teamId={team_id}&hydrate=team,linescore'
 	nhl_url_response = requests.get(nhl_url, headers=headers)
-	nhl_game_json = nhl_url_response.json()
-
-	if not nhl_game_json['dates']:  # No game today for that team
-		return None
-
-	nhl_game_json = nhl_game_json['dates'][0]['games'][0]
-
-	if nhl_game_json['teams']['away']['team']['id'] == team_id:
-		home_string = 'away'
-		opponent_home_string = 'home'
-	else:
-		home_string = 'home'
-		opponent_home_string = 'away'
-
-	gamepk = nhl_game_json['gamePk']
-	abstract_game_state = nhl_game_json['status']['abstractGameState']
-	detailed_state = nhl_game_json['status']['detailedState']
-	goals = nhl_game_json['teams'][home_string]['score']
-	opponent_goals = nhl_game_json['teams'][opponent_home_string]['score']
-	game_date = nhl_game_json['gameDate']
-	in_intermission = nhl_game_json['linescore']['intermissionInfo']['inIntermission']
-	return Game(
-		team_id, gamepk, abstract_game_state, detailed_state, goals, opponent_goals, in_intermission,
-		game_date
-	)
+	return nhl_url_response.json()
 
 
-def goal() -> None:
-	if DEBUG:
-		print(f"{get_utc():%Y-%m-%d %H:%M:%S} GOAL. Waiting {DELAY} seconds.")
-	time.sleep(DELAY)
-	winsound.PlaySound('positivechime.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
-	if LIGHT:
-		goal_light.goal(team)
+class Game:
+	def __init__(self, team_id, delay, goal_light=None):
+		self.team_id = team_id
+		self.opponent_team_id = None
+		self.gamepk = None
+		self.game_date = None
+		self.abstract_game_state = None
+		self.detailed_state = None
+		self.goals = None
+		self.opponent_goals = None
+		self.in_intermission = None
+		self.delay = delay
+		self.goal_light = goal_light
+		self.update()
 
-def goal_against() -> None:
-	if DEBUG:
-		print(f"{get_utc():%Y-%m-%d %H:%M:%S} GOAL AGAINST. Waiting {DELAY} seconds.")
-	time.sleep(DELAY)
-	winsound.PlaySound('negativechime.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
-	if LIGHT:
-		goal_light.goal_against()
+	def update(self):
+		game_json = get_nhl_json(self.team_id)
+		if not game_json['dates']:  # No game today for that team
+			return
 
+		game_json = game_json['dates'][0]['games'][0]
 
-def win() -> None:
-	if DEBUG:
-		print("Win!")
-	time.sleep(DELAY)
-	winsound.PlaySound('leafswin.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
-	if LIGHT:
-		goal_light.win(team)
+		if game_json['teams']['away']['team']['id'] == self.team_id:
+			home_string = 'away'
+			opponent_home_string = 'home'
+		else:
+			home_string = 'home'
+			opponent_home_string = 'away'
 
+		self.gamepk = game_json['gamePk']
+		self.abstract_game_state = game_json['status']['abstractGameState']
+		self.detailed_state = game_json['status']['detailedState']
+		self.goals = game_json['teams'][home_string]['score']
+		self.opponent_goals = game_json['teams'][opponent_home_string]['score']
+		self.game_date = game_json['gameDate']
+		self.in_intermission = game_json['linescore']['intermissionInfo']['inIntermission']
 
-def loss() -> None:
-	if DEBUG:
-		print("Loss.")
-	time.sleep(DELAY)
-	if LIGHT:
-		goal_light.loss()
-
-
-def game_start() -> None:
-	if DEBUG:
-		print("Start of Game.")
-	winsound.PlaySound('notification.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
-	if MUTE_PREGAME:
-		os.system("D:\\Steven\\Documents\\NHLGames\\mpv\\mpv-remote.bat set volume 100")
-	if LIGHT:
-		goal_light.game_started()
-
-
-def start_of_intermission() -> None:
-	if DEBUG:
-		print("Start of Intermission.")
-	time.sleep(DELAY)
-	winsound.PlaySound('notification.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
-	if MUTE_INTERMISSION:
-		os.system("D:\\Steven\\Documents\\NHLGames\\mpv\\mpv-remote.bat set volume 0")
-	if LIGHT:
-		goal_light.start_of_intermission()
-
-
-def end_of_intermission() -> None:
-	if DEBUG:
-		print("End of Intermission.")
-	time.sleep(DELAY)
-	winsound.PlaySound('notification.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
-	if MUTE_INTERMISSION:
-		os.system("D:\\Steven\\Documents\\NHLGames\\mpv\\mpv-remote.bat set volume 100")
-	if LIGHT:
-		goal_light.end_of_intermission()
-
-
-def get_utc() -> datetime.datetime:
-	return datetime.datetime.utcnow()
-
-
-def custom_sleep(seconds) -> None:
-	for i in range(seconds):
-		print(f"Sleep: {seconds - i}")
-		time.sleep(1)
-
-
-def intermission_loop() -> None:
-	start_of_intermission()
-	intermission = True
-	while intermission:
+	def win(self):
 		if DEBUG:
-			print(f"{get_utc():%Y-%m-%d %H:%M:%S} Intermission. Sleeping for 60 seconds.")
-		time.sleep(61)
-		intermission = get_game_state(team).in_intermission
-	end_of_intermission()
+			print("Win!")
+		time.sleep(self.delay)
+		winsound.PlaySound('leafswin.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
+		if self.goal_light:
+			self.goal_light.win(self.team_id)
 
-
-def pre_game_loop() -> None:
-	game_started = False
-	if MUTE_PREGAME:
-		os.system("D:\\Steven\\Documents\\NHLGames\\mpv\\mpv-remote.bat set volume 0")
-	while not game_started:
+	def loss(self):
 		if DEBUG:
-			print("Game not started. Sleeping for 60 seconds.")
-		time.sleep(61)
-		game_started = get_game_state(team).abstract_game_state != 'Preview'
+			print("Loss.")
+		time.sleep(self.delay)
+		if LIGHT:
+			self.goal_light.loss()
 
-
-def game_loop(initial_goals, initial_opponent_goals) -> None:
-	goals = initial_goals
-	opponent_goals = initial_opponent_goals
-	final = False
-	game_update = None
-	while not final:
-		time.sleep(21)
-
-		game_update = get_game_state(team)
-		final = game_update.abstract_game_state == 'Final'
-
-		if game_update.goals > goals:
-			goal()
-		if game_update.opponent_goals > opponent_goals:
-			goal_against()
-		if game_update.in_intermission:
-			intermission_loop()
+	def goal(self):
 		if DEBUG:
-			print(
-				f"{get_utc():%Y-%m-%d %H:%M:%S} "
-				f"Score: "
-				f"{game_update.goals} - {game_update.opponent_goals}"
-			)
-		goals = game_update.goals
-		opponent_goals = game_update.opponent_goals
+			print(f"{datetime.datetime.now():%Y-%m-%d %H:%M:%S} GOAL. Waiting {self.delay} seconds.")
+		time.sleep(self.delay)
+		winsound.PlaySound('positivechime.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
+		if LIGHT:
+			self.goal_light.goal(self.team_id)
 
-	if game_update.goals > game_update.opponent_goals:
-		win()
-	else:
-		loss()
+	def goal_against(self):
+		if DEBUG:
+			print(f"{datetime.datetime.now():%Y-%m-%d %H:%M:%S} GOAL AGAINST. Waiting {self.delay} seconds.")
+		time.sleep(self.delay)
+		winsound.PlaySound('negativechime.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
+		if LIGHT:
+			self.goal_light.goal_against()
+
+	def game_start(self):
+		if DEBUG:
+			print("Start of Game.")
+		winsound.PlaySound('notification.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
+		if MUTE_PREGAME:
+			os.system("D:\\Steven\\Documents\\NHLGames\\mpv\\mpv-remote.bat set volume 100")
+		if LIGHT:
+			self.goal_light.game_started()
+
+	def start_of_intermission(self):
+		if DEBUG:
+			print("Start of Intermission.")
+		time.sleep(30)
+		winsound.PlaySound('notification.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
+		if MUTE_INTERMISSION:
+			os.system("D:\\Steven\\Documents\\NHLGames\\mpv\\mpv-remote.bat set volume 0")
+		if LIGHT:
+			self.goal_light.start_of_intermission()
+
+	def end_of_intermission(self):
+		if DEBUG:
+			print("End of Intermission.")
+		time.sleep(5)
+		winsound.PlaySound('notification.wav', winsound.SND_FILENAME | winsound.SND_ASYNC)
+		if MUTE_INTERMISSION:
+			os.system("D:\\Steven\\Documents\\NHLGames\\mpv\\mpv-remote.bat set volume 100")
+		if LIGHT:
+			self.goal_light.end_of_intermission()
+
+	def intermission_loop(self):
+		self.start_of_intermission()
+		while self.in_intermission:
+			if DEBUG:
+				print(f"{datetime.datetime.now():%Y-%m-%d %H:%M:%S} Intermission. Sleeping for 60 seconds.")
+			time.sleep(61)
+			self.update()
+		self.end_of_intermission()
+
+	def pre_game_loop(self):
+		if MUTE_PREGAME:
+			os.system("D:\\Steven\\Documents\\NHLGames\\mpv\\mpv-remote.bat set volume 0")
+		while self.abstract_game_state == 'Preview':
+			if DEBUG:
+				print("Game not started. Sleeping for 60 seconds.")
+			time.sleep(61)
+			self.update()
+
+	def game_loop(self):
+		initial_goals = self.goals
+		initial_opponent_goals = self.opponent_goals
+		while self.abstract_game_state != 'Final':
+			time.sleep(21)
+			self.update()
+
+			if self.goals > initial_goals:
+				self.goal()
+			if self.opponent_goals > initial_opponent_goals:
+				self.goal_against()
+			if self.in_intermission:
+				self.intermission_loop()
+			if DEBUG:
+				print(
+					f"{datetime.datetime.now():%Y-%m-%d %H:%M:%S} "
+					f"Score: "
+					f"{self.goals} - {self.opponent_goals}"
+				)
+			initial_goals = self.goals
+			initial_opponent_goals = self.opponent_goals
+
+		if self.goals > self.opponent_goals:
+			self.win()
+		else:
+			self.loss()
 
 
 def demo():
@@ -221,22 +195,21 @@ def demo():
 	print("Game not started. Sleeping for 60 seconds.")
 	time.sleep(20)
 	print("Start of Game.")
-	print(f"{get_utc():%Y-%m-%d %H:%M:%S}  Score: 0 - 0")
+	print(f"{datetime.datetime.now():%Y-%m-%d %H:%M:%S}  Score: 0 - 0")
 	time.sleep(5)
-	print(f"{get_utc():%Y-%m-%d %H:%M:%S} GOAL AGAINST. Waiting {DELAY} seconds.")
+	print(f"{datetime.datetime.now():%Y-%m-%d %H:%M:%S} GOAL AGAINST. Waiting {DELAY} seconds.")
 	time.sleep(3)
 	print("Start of Intermission.")
 	time.sleep(10)
 	print("End of Intermission.")
 	time.sleep(5)
-	print(f"{get_utc():%Y-%m-%d %H:%M:%S} GOAL. Waiting {DELAY} seconds.")
+	print(f"{datetime.datetime.now():%Y-%m-%d %H:%M:%S} GOAL. Waiting {DELAY} seconds.")
 	time.sleep(5)
 	print("Win!")
 	exit(0)
 
 
-if __name__ == "__main__":
-
+def main():
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--demo', action="store_true", default=False, help="Run a small demo when theres no game")
 	parser.add_argument('-t', '--team', default='TOR', help='Enter the three letter team code. Defualt is "TOR".')
@@ -246,37 +219,42 @@ if __name__ == "__main__":
 	if args.demo:
 		demo()
 
-	team = args.team
-	DELAY = args.delay or DELAY
+	team_id = teams[args.team]
+	game = None
+	goal_light = None
 
 	try:
-		game_details = get_game_state(team)
+		game = Game(team_id=team_id, delay=args.delay, goal_light=None)
 	except Exception as e:
 		print(f"Error fetching game: {e}")
 		exit(1)
 
-	if not game_details:
+	if not game.gamepk:
 		print("No game today for that team.")
 		exit(1)
-	if game_details.detailed_state == 'Postponed':
+	if game.detailed_state == 'Postponed':
 		print("Game has been postponed.")
 		exit(1)
 
 	if DEBUG:
-		print(f"Team is {team}.")
-		print(f"Game date is {game_details.game_date}.")
-		print(f"Gamepk is {game_details.gamepk}.")
+		print(f"Team is {args.team}.")
+		print(f"Game date is {game.game_date}.")
+		print(f"Gamepk is {game.gamepk}.")
 
 	if LIGHT:
 		goal_light = ArduinoGoalLight()
 
-	if game_details.abstract_game_state == 'Preview':
-		pre_game_loop()
-		game_details = get_game_state(team)
+	if game.abstract_game_state == 'Preview':
+		game.pre_game_loop()
+		game.update()
 
-	if game_details.abstract_game_state == 'Live':
-		game_start()
-		game_loop(game_details.goals, game_details.opponent_goals)
+	if game.abstract_game_state == 'Live':
+		game.game_start()
+		game.game_loop()
 
 	if LIGHT:
 		goal_light.exit()
+
+
+if __name__ == "__main__":
+	main()
