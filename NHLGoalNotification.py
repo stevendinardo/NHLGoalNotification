@@ -40,10 +40,10 @@ def get_shifted_time() -> datetime.datetime:
 	return datetime.datetime.now() - datetime.timedelta(hours=6)
 
 
-def get_nhl_json(team_id):
+def get_nhl_json(team_id, session):
 	date = f"{get_shifted_time():%Y-%m-%d}"
 	nhl_url = f'{NHL_API_URL}schedule?date={date}&teamId={team_id}&hydrate=team,linescore'
-	nhl_url_response = requests.get(nhl_url, headers=headers)
+	nhl_url_response = session.get(nhl_url, headers=headers)
 	return nhl_url_response.json()
 
 
@@ -60,10 +60,11 @@ class Game:
 		self.in_intermission = None
 		self.delay = delay
 		self.goal_light = goal_light
+		self.session = requests.Session()
 		self.update()
 
 	def update(self):
-		game_json = get_nhl_json(self.team_id)
+		game_json = get_nhl_json(self.team_id, self.session)
 		if not game_json['dates']:  # No game today for that team
 			return
 
