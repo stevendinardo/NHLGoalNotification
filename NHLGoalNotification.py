@@ -219,12 +219,16 @@ def main():
 	if args.demo:
 		demo()
 
+	args.team = args.team.upper()
+	if args.team not in teams:
+		print(f"No team '{args.team}' found.")
+		exit(1)
+
 	team_id = teams[args.team]
 	game = None
-	goal_light = None
 
 	try:
-		game = Game(team_id=team_id, delay=args.delay, goal_light=None)
+		game = Game(team_id=team_id, delay=args.delay)
 	except Exception as e:
 		print(f"Error fetching game: {e}")
 		exit(1)
@@ -241,9 +245,6 @@ def main():
 		print(f"Game date is {game.game_date}.")
 		print(f"Gamepk is {game.gamepk}.")
 
-	if LIGHT:
-		goal_light = ArduinoGoalLight()
-
 	if game.abstract_game_state == 'Preview':
 		game.pre_game_loop()
 		game.update()
@@ -251,9 +252,6 @@ def main():
 	if game.abstract_game_state == 'Live':
 		game.game_start()
 		game.game_loop()
-
-	if LIGHT:
-		goal_light.exit()
 
 
 if __name__ == "__main__":
