@@ -9,7 +9,6 @@ import requests
 from ArduinoGoalLight import ArduinoGoalLight
 
 NHL_API_URL = 'http://statsapi.web.nhl.com/api/v1/'
-DELAY = 15
 MUTE_INTERMISSION = True
 MUTE_PREGAME = False
 
@@ -46,7 +45,7 @@ def get_nhl_json(team_id, session):
 
 
 def format_time():
-	return f"{datetime.datetime.now():%Y-%m-%d %I:%M:%S %p}"
+	return f"{datetime.datetime.now():%Y-%m-%d %I:%M:%S%p}"
 
 
 class Game:
@@ -85,7 +84,8 @@ class Game:
 		self.detailed_state = game_json['status']['detailedState']
 		self.goals = game_json['teams'][home_string]['score']
 		self.opponent_goals = game_json['teams'][opponent_home_string]['score']
-		self.game_date = game_json['gameDate']
+		self.game_date = datetime.datetime.fromisoformat(game_json['gameDate'][:-1])
+		self.game_date = self.game_date.replace(tzinfo=datetime.timezone.utc).astimezone(tz=None)
 		self.in_intermission = game_json['linescore']['intermissionInfo']['inIntermission']
 
 	def win(self):
@@ -192,21 +192,20 @@ class Game:
 
 def demo():
 	print("Running a demo. Sleep times have been reduced by 75%. ")
-	print("Game not started. Sleeping for 60 seconds.")
+	print(f"{format_time()} Game not started. Sleeping for 60 seconds.")
 	time.sleep(20)
 	print("Start of Game.")
-	print(f"{datetime.datetime.now():%Y-%m-%d %H:%M:%S}  Score: 0 - 0")
+	print(f"{format_time()} Score: 0 - 0")
 	time.sleep(5)
-	print(f"{datetime.datetime.now():%Y-%m-%d %H:%M:%S} GOAL AGAINST. Waiting {DELAY} seconds.")
+	print(f"{format_time()} GOAL AGAINST. Waiting 10 seconds.")
 	time.sleep(3)
-	print("Start of Intermission.")
+	print(f"{format_time()} Start of Intermission.")
 	time.sleep(10)
-	print("End of Intermission.")
+	print(f"{format_time()} End of Intermission.")
 	time.sleep(5)
-	print(f"{datetime.datetime.now():%Y-%m-%d %H:%M:%S} GOAL. Waiting {DELAY} seconds.")
+	print(f"{format_time()} GOAL. Waiting 10 seconds.")
 	time.sleep(5)
 	print("Win!")
-	exit(0)
 
 
 def main():
@@ -218,6 +217,7 @@ def main():
 
 	if args.demo:
 		demo()
+		exit(0)
 
 	args.team = args.team.upper()
 	if args.team not in teams:
@@ -241,7 +241,7 @@ def main():
 		exit(1)
 
 	print(f"Team is {args.team}.")
-	print(f"Game date is {game.game_date}.")
+	print(f"Game date is {game.game_date.strftime('%Y-%m-%d %I:%M:%S%p')}.")
 
 	if game.abstract_game_state == 'Preview':
 		game.pre_game_loop()
