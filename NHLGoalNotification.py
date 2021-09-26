@@ -62,6 +62,7 @@ class Game:
 		self.delay = delay
 		self.goal_light = goal_light
 		self.session = requests.Session()
+		self.intermission_time = None
 		self.update()
 
 	def update(self):
@@ -87,6 +88,7 @@ class Game:
 		self.game_date = datetime.datetime.fromisoformat(game_json['gameDate'][:-1])
 		self.game_date = self.game_date.replace(tzinfo=datetime.timezone.utc).astimezone(tz=None)
 		self.in_intermission = game_json['linescore']['intermissionInfo']['inIntermission']
+		self.intermission_time = game_json['linescore']['intermissionInfo']['intermissionTimeRemaining']
 
 	def win(self):
 
@@ -152,8 +154,8 @@ class Game:
 
 		self.start_of_intermission()
 		while self.in_intermission:
-			print(f"{format_time()} Intermission. Sleeping for 60 seconds.")
-			time.sleep(61)
+			print(f"{format_time()} Intermission. Sleeping for 30 secs. Est. time: {self.intermission_time/60:.2f} mins")
+			time.sleep(30)
 			self.update()
 		self.end_of_intermission()
 
